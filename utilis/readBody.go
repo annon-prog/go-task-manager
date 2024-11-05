@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func readRequestBody(r *http.Request) (map[string]interface{}, error) {
+func ReadRequestBody(r *http.Request) (map[string]interface{}, error) {
 	var requestBody map[string]interface{}
 
 	//read request body
