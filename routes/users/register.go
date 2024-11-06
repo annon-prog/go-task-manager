@@ -1,8 +1,6 @@
 package users
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
@@ -17,50 +15,43 @@ func RegisterUser(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		//read request payload
-		registeredUser, err := utilis.ReadRequestBody(r)
-		if err != nil {
-			log.Printf("Failed to read registered users payload : %v", err)
-			http.Error(w, "Failed to read registered users payload", http.StatusInternalServerError)
+		registerUser, err := utilis.ReadRequestBody(r)
+		if utilis.DisplayErrors(w, "Failed to read registered users payload", err, http.StatusInternalServerError) {
 			return
 		}
 
 		//define individual request body
-		username := utilis.ExtractString(registeredUser, "username")
-		email := utilis.ExtractString(registeredUser, "email")
-		password := utilis.ExtractString(registeredUser, "password")
-		passwordConfirmation := utilis.ExtractString(registeredUser, "password_confirmation")
+		username := utilis.ExtractString(registerUser, "username")
+		email := utilis.ExtractString(registerUser, "email")
+		password := utilis.ExtractString(registerUser, "password")
+		passwordConfirmation := utilis.ExtractString(registerUser, "password_confirmation")
 
 		//validate that password and password confirmation are the same
 		passwordConfirmCheck := confirmPassword(password, passwordConfirmation)
-		if !passwordConfirmCheck {
-			log.Println("Confirm password is different from the password provided")
-			http.Error(w, "Confirm password is different from the password provided", http.StatusBadRequest)
+		if utilis.DisplayBoolErrors(w, "Password and confirm password did not match", passwordConfirmCheck, http.StatusBadRequest) {
 			return
 		}
 
 		//hash password provided
 		hashedPassword, err := hashPassword(password)
-		if err != nil {
-			log.Printf("Failed to hash password : %v", err)
-			http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		if utilis.DisplayErrors(w, "Failed to hash password", err, http.StatusInternalServerError) {
+			return
 		}
 
 		//insert record into users table
 		userId, err := database.InsertToUsers(db, username, email, hashedPassword)
-		if err != nil {
-			log.Printf("Failed to insert record into the users table: %v", err)
-			http.Error(w, "Failed to insert record into the users table", http.StatusInternalServerError)
+		if utilis.DisplayErrors(w, "Failed to insert record into the users table", err, http.StatusInternalServerError) {
 			return
 		}
 
+		//Define response payload
 		response := map[string]interface{}{
 			"id":      userId,
 			"message": "User was registered successfully",
 		}
 
-		//write json response
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(response)
+		//write success response
+		utilis.CreateSuccessResponse(w, response, http.StatusCreated)
 
 	}
 

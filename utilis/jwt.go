@@ -1,7 +1,7 @@
 package utilis
 
 import (
-	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,7 +9,7 @@ import (
 
 var secretKey = []byte("secret-key")
 
-func createToken(username string) (string, error) {
+func CreateToken(username string) (string, error) {
 
 	//Create a new token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -26,17 +26,16 @@ func createToken(username string) (string, error) {
 }
 
 // verify jwt Tokens
-func verifyToken(tokenString string) error {
+func VerifyJWTTokens(tokenString string, w http.ResponseWriter, r *http.Request) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 
-	if err != nil {
-		return err
+	if DisplayErrors(w, "Error parsing jwt token ", err, http.StatusInternalServerError) {
+		return
 	}
 
-	if !token.Valid {
-		return fmt.Errorf("invalid token")
+	if DisplayBoolErrors(w, "invalid token", token.Valid, http.StatusInternalServerError) {
+		return
 	}
-	return nil
 }
