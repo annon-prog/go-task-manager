@@ -8,7 +8,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
+
+	// "github.com/joho/godotenv"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/urfave/negroni"
 
@@ -18,20 +19,16 @@ import (
 	"go-task-manager/routes/users"
 )
 
-var (
-	db *sqlx.DB
-)
-
 func main() {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Failed to load environment variables: %v", err)
-		return
-	}
-	log.Println("Environment variables loaded successfully")
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Printf("Failed to load environment variables: %v", err)
+	// 	return
+	// }
+	// log.Println("Environment variables loaded successfully")
 
-	db, err = sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	db, err := sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
