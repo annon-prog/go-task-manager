@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/urfave/negroni"
 
 	// custom imports from the project
@@ -31,15 +31,15 @@ func main() {
 	}
 	log.Println("Environment variables loaded successfully")
 
-	db, err = sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASS"),
+	db, err = sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASS"),
 		os.Getenv("DB_NAME"),
 	))
 	if err != nil {
-		log.Printf("Failed to connect to the database : %v", err)
+		log.Printf("Failed to connect to the database: %v", err)
 		return
 	}
 	defer db.Close()
@@ -47,17 +47,20 @@ func main() {
 	log.Println("Successfully connected to the database")
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port if not set
+	}
 
-	//Define router variables
+	// Define router variables
 	router := mux.NewRouter()
 	userRouter := mux.NewRouter().PathPrefix("/users").Subrouter().StrictSlash(true)
 	taskRouter := mux.NewRouter().PathPrefix("/tasks").Subrouter().StrictSlash(true)
 
-	//define the user routes
+	// Define the user routes
 	userRouter.HandleFunc("/register", users.RegisterUser(db)).Methods("POST")
 	userRouter.HandleFunc("/login", users.LoginUser(db)).Methods("POST")
 
-	//define the task routes
+	// Define the task routes
 	taskRouter.HandleFunc("/create", tasks.Create(db)).Methods("POST")
 	taskRouter.HandleFunc("/update", tasks.Update(db)).Methods("POST")
 
@@ -73,15 +76,13 @@ func main() {
 		negroni.Wrap(userRouter),
 	)
 
-	//Mount other routes to the main router
+	// Mount other routes to the main router
 	router.PathPrefix("/users").Handler(userNegroni)
-
 	router.PathPrefix("/tasks").Handler(taskNegroni)
 
 	n := negroni.Classic()
 	n.UseHandler(router)
 
 	log.Printf("Server is listening at %s", port)
-	log.Fatal(http.ListenAndServe(port, n))
-
+	log.Fatal(http.ListenAndServe(":"+port, n))
 }

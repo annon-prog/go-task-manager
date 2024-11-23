@@ -1,0 +1,23 @@
+services:
+  - name: go-task-manager
+    type: web
+    env: go
+    buildCommand: go build -o app .
+    startCommand: ./app
+    autoDeploy: true
+    envVars:
+      - key: DB_USER
+        fromDatabase:
+          name: DB_USER
+      - key: DB_PASS
+        fromDatabase:
+          name: DB_PASS
+      - key: DB_HOST
+        fromDatabase:
+          name: DB_HOST
+      - key: DB_PORT
+        fromDatabase:
+          name: DB_PORT
+      - key: DB_NAME
+        fromDatabase:
+          name: DB_NAME
