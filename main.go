@@ -8,25 +8,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
-
-	// "github.com/joho/godotenv"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/urfave/negroni"
 
-	// custom imports from the project
 	"go-task-manager/middlewares"
 	"go-task-manager/routes/tasks"
 	"go-task-manager/routes/users"
 )
 
 func main() {
-
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Printf("Failed to load environment variables: %v", err)
-	// 	return
-	// }
-	// log.Println("Environment variables loaded successfully")
 
 	db, err := sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
@@ -50,25 +40,29 @@ func main() {
 
 	// Define router variables
 	router := mux.NewRouter()
-	userRouter := mux.NewRouter().PathPrefix("/users").Subrouter().StrictSlash(true)
-	taskRouter := mux.NewRouter().PathPrefix("/tasks").Subrouter().StrictSlash(true)
 
-	// Define the user routes
+	// Root handler for the API
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Welcome to the Go Task Manager API!")
+	})
+
+	// User routes
+	userRouter := router.PathPrefix("/users").Subrouter().StrictSlash(true)
 	userRouter.HandleFunc("/register", users.RegisterUser(db)).Methods("POST")
 	userRouter.HandleFunc("/login", users.LoginUser(db)).Methods("POST")
 
-	// Define the task routes
+	// Task routes
+	taskRouter := router.PathPrefix("/tasks").Subrouter().StrictSlash(true)
 	taskRouter.HandleFunc("/create", tasks.Create(db)).Methods("POST")
 	taskRouter.HandleFunc("/update", tasks.Update(db)).Methods("POST")
 
-	// Create a new Negroni instance for the task routes
+	// Middlewares
 	taskNegroni := negroni.New(
 		middlewares.VerifyToken(),
 		middlewares.FetchToken(),
 		negroni.Wrap(taskRouter),
 	)
 
-	// Create a new Negroni instance for the user routes
 	userNegroni := negroni.New(
 		negroni.Wrap(userRouter),
 	)
@@ -77,6 +71,7 @@ func main() {
 	router.PathPrefix("/users").Handler(userNegroni)
 	router.PathPrefix("/tasks").Handler(taskNegroni)
 
+	// Final middleware setup
 	n := negroni.Classic()
 	n.UseHandler(router)
 
